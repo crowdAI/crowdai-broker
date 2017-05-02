@@ -2,6 +2,9 @@ from flask import Flask
 from flask_socketio import SocketIO
 from flask_socketio import send, emit
 from config import Config as config
+
+from utils import validate_request_params
+
 import uuid
 import json
 
@@ -28,10 +31,17 @@ def handle_authenticate(args):
             session_token : String
                 Holds a unique identifier for a particular session
     """
+    validation = validate_request_params(args, ["API_KEY", "challenge_id"])
+    if not validation["result"]:
+        return validation["message"]
+
+    API_KEY = args["API_KEY"]
+    challenge_id = args["challenge_id"]
+
     if challenge_id not in config.CHALLENGES.keys():
         _message = {}
         _message["status"] = False
-        _message["message"] = "Unrecognized Challenge : %s. Please update your client." % challenge_id
+        _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
         _message["response"] = {}
 
         return _message
@@ -58,6 +68,10 @@ def close_session(args):
                 Holds an optional error message in case of failure of session termination
 
     """
+    validation = validate_request_params(args, ["session_token"])
+    if not validation["result"]:
+        return validation["message"]
+    session_token = args["session_token"]
 
     _message = {}
     _message["status"] = True
@@ -91,21 +105,10 @@ def execute_function(args):
             response: JSON Object
                 JSON object which holds the response of the function
     """
-
     # Validate request params
-    missing_keys = []
-    expected_keys = ["session_token","challenge_id","function_name","data","dry_run"]
-    arg_keys = args.keys()
-    for _key in expected_keys:
-        if _key not in args.keys():
-            missing_keys.append(_key)
-
-    if len(missing_keys) > 0:
-        _message = {}
-        _message["status"] = False
-        _message["message"] = "The following params are required params : %s " % (str(missing_keys))
-        _message["response"] = {}
-        return _message
+    validation = validate_request_params(args, ["session_token","challenge_id","function_name","data","dry_run"])
+    if not validation["result"]:
+        return validation["message"]
 
     session_token = args["session_token"]
     challenge_id = args["challenge_id"]
@@ -118,12 +121,13 @@ def execute_function(args):
     if challenge_id not in config.CHALLENGES.keys():
         _message = {}
         _message["status"] = False
-        _message["message"] = "Unrecognized Challenge : %s. Please update your client." % challenge_id
+        _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
         _message["response"] = {}
 
         return _message
     else:
-        return config.CHALLENGES[challenge_id].execute_function(function_name, data, dry_run)
+        _message = config.CHALLENGES[challenge_id].execute_function(function_name, data, dry_run)
+        return _message
 
 
 if __name__ == '__main__':
