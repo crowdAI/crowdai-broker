@@ -40,7 +40,7 @@ def close_session(args):
         Closes a session, by registering it in the redis-server
 
         Request Params:
-            session_token: String
+            session_token : String
                 Unique identifier for a particular session
 
         Response Params:
@@ -53,7 +53,40 @@ def close_session(args):
 
     _message = {}
     _message["status"] = True
-    _message["message"] = True
+    _message["message"] = ""
+    return _message    
+
+@socketio.on('execute_function')
+def execute_function(args):
+    """
+        Executes a particular function from a particular challenge's grader
+
+        Request Params:
+            session_token : String
+                Unique identifier for a particular session
+            challenge_id : String
+                Unique identifier for the challenge
+            function_name : String
+                Unique identifier for the relevant function in the challenge
+            data : JSON Object
+                JSON object which needs to be passed onto the said function
+
+        Response Params:
+            status : Boolean
+                Holds True if the operation is successfully executed
+            message : String
+                Holds an optional error message in case of failure of execution
+            response: JSON Object
+                JSON object which holds the response of the function
+    """
+
+    _message = {}
+    _message["status"] = True
+    _message["message"] = ""
+    _message["response"] = {}
+    return _message
+
+
 
 if __name__ == '__main__':
     socketio.run(app)
