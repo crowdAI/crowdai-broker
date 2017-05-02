@@ -1,2 +1,0 @@
-class Config:
-    CROWDAI_GRADER_API_KEY="SAMPLE_CROWDAI_KEY"
