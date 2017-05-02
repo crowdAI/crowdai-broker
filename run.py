@@ -46,6 +46,7 @@ def handle_authenticate(args):
 
         return _message
     else:
+        # TO-DO: Add actual authentication
         _message = {}
         _message["status"] = True
         _message["message"] = ""
@@ -72,6 +73,8 @@ def close_session(args):
     if not validation["result"]:
         return validation["message"]
     session_token = args["session_token"]
+
+    # TO-DO : Add actual session termination
 
     _message = {}
     _message["status"] = True
