@@ -28,11 +28,19 @@ def handle_authenticate(args):
             session_token : String
                 Holds a unique identifier for a particular session
     """
-    _message = {}
-    _message["status"] = True
-    _message["message"] = ""
-    _message["session_token"] = str(uuid.uuid4())
-    return _message
+    if challenge_id not in config.CHALLENGES.keys():
+        _message = {}
+        _message["status"] = False
+        _message["message"] = "Unrecognized Challenge : %s. Please update your client." % challenge_id
+        _message["response"] = {}
+
+        return _message
+    else:
+        _message = {}
+        _message["status"] = True
+        _message["message"] = ""
+        _message["session_token"] = str(uuid.uuid4())
+        return _message
 
 @socketio.on('close_session')
 def close_session(args):
@@ -54,7 +62,7 @@ def close_session(args):
     _message = {}
     _message["status"] = True
     _message["message"] = ""
-    return _message    
+    return _message
 
 @socketio.on('execute_function')
 def execute_function(args):
@@ -70,6 +78,10 @@ def execute_function(args):
                 Unique identifier for the relevant function in the challenge
             data : JSON Object
                 JSON object which needs to be passed onto the said function
+            dry_run : Boolean
+                Boolean Variable which states if the operation is needed to be
+                actually executed, or randomly generated but semantically relevant
+                response is supposed to be returned.
 
         Response Params:
             status : Boolean
@@ -80,12 +92,38 @@ def execute_function(args):
                 JSON object which holds the response of the function
     """
 
-    _message = {}
-    _message["status"] = True
-    _message["message"] = ""
-    _message["response"] = {}
-    return _message
+    # Validate request params
+    missing_keys = []
+    expected_keys = ["session_token","challenge_id","function_name","data","dry_run"]
+    arg_keys = args.keys()
+    for _key in expected_keys:
+        if _key not in args.keys():
+            missing_keys.append(_key)
 
+    if len(missing_keys) > 0:
+        _message = {}
+        _message["status"] = False
+        _message["message"] = "The following params are required params : %s " % (str(missing_keys))
+        _message["response"] = {}
+        return _message
+
+    session_token = args["session_token"]
+    challenge_id = args["challenge_id"]
+    function_name = args["function_name"]
+    data = args["data"]
+    dry_run = args["dry_run"]
+
+    # TO-DO: Validate Session. Expire session after 48 hours
+
+    if challenge_id not in config.CHALLENGES.keys():
+        _message = {}
+        _message["status"] = False
+        _message["message"] = "Unrecognized Challenge : %s. Please update your client." % challenge_id
+        _message["response"] = {}
+
+        return _message
+    else:
+        return config.CHALLENGES[challenge_id].execute_function(function_name, data, dry_run)
 
 
 if __name__ == '__main__':
