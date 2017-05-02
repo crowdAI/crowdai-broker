@@ -8,6 +8,8 @@ from utils import validate_request_params
 import uuid
 import json
 
+import time
+
 app = Flask(__name__)
 socketio = SocketIO(app)
 
@@ -108,6 +110,8 @@ def execute_function(args):
             response: JSON Object
                 JSON object which holds the response of the function
     """
+    #TO-DO: Add a separate `type` param to communicate the "progress of execution"
+
     # Validate request params
     validation = validate_request_params(args, ["session_token","challenge_id","function_name","data","dry_run"])
     if not validation["result"]:
