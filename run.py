@@ -89,6 +89,9 @@ def execute_function(args):
         Executes a particular function from a particular challenge's grader
 
         Request Params:
+            response_channel : String
+                The name of the response channel where the server replies back
+                about the final result and the progress in the meantime
             session_token : String
                 Unique identifier for a particular session
             challenge_id : String
@@ -113,10 +116,11 @@ def execute_function(args):
     #TO-DO: Add a separate `type` param to communicate the "progress of execution"
 
     # Validate request params
-    validation = validate_request_params(args, ["session_token","challenge_id","function_name","data","dry_run"])
+    validation = validate_request_params(args, ["response_channel", "session_token","challenge_id","function_name","data","dry_run"])
     if not validation["result"]:
         return validation["message"]
 
+    response_channel = args["response_channel"]
     session_token = args["session_token"]
     challenge_id = args["challenge_id"]
     function_name = args["function_name"]
@@ -133,8 +137,28 @@ def execute_function(args):
 
         return _message
     else:
-        _message = config.CHALLENGES[challenge_id]["instance"].execute_function(function_name, data, dry_run)
-        return _message
+        result = config.CHALLENGES[challenge_id]["instance"].execute_function(function_name, data, dry_run)
+        #Enqueue Job
+        #Listen on Output Channel
+        #Relay messages to the client until job complete
+        #Stop listening on Output Channel in case of job complete or error
+        result["is_complete"] = False
+        result["progress"] = 0
+        for k in range(100):
+            if k==99:
+                result["is_complete"] = True
+                result["progress"] = 1
+                emit(response_channel, result)
+                #In case of error, "emit" result with status False,
+                # and return empty value to end this call
+            else:
+                result["is_complete"] = False
+                result["progress"] = k*1.0/100
+                emit(response_channel, result)
+                #In case of error, "emit" result with status False,
+                # and return empty value to end this call
+        return {}
+        # return _message
 
 
 if __name__ == '__main__':
