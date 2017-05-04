@@ -1,4 +1,4 @@
-from base_challenge import CrowdAIBaseChallenge
+from ..base_challenge import CrowdAIBaseChallenge
 import random
 
 class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):

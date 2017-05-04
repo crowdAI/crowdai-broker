@@ -133,7 +133,7 @@ def execute_function(args):
 
         return _message
     else:
-        _message = config.CHALLENGES[challenge_id].execute_function(function_name, data, dry_run)
+        _message = config.CHALLENGES[challenge_id]["instance"].execute_function(function_name, data, dry_run)
         return _message
 
 
