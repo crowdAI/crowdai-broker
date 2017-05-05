@@ -1,0 +1,10 @@
+{
+    "CROWDAI_GRADER_API_KEY":"EXAMPLE_GRADER_API_KEY",
+    "CROWDAI_BASE_URL":"https://crowdai.org",
+    "CHALLENGES" : {
+            "GeccoOptimizationChallenge2017" : {
+                "redis-host" : "localhost",
+                "redis-port" : "6379"
+            }
+        }
+}

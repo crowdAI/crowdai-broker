@@ -1,3 +1,3 @@
 class CrowdAIBaseChallenge:
-    def __init__(self):
-        self._ = True
+    def __init__(self, config):
+        self.config = config

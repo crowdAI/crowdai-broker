@@ -1,14 +1,29 @@
 from flask import Flask
 from flask_socketio import SocketIO
 from flask_socketio import send, emit
-from config import Config as config
 
 from utils import validate_request_params
+
+import requests
 
 import uuid
 import json
 
 import time
+
+"""
+Load config
+"""
+#TO-DO: Implement a less hacky version of the config loader
+config = json.loads(open("config.json").read())
+barebone_config = config
+#Instantiate Challenge objects
+for _challenge in config["CHALLENGES"].keys():
+    m = __import__("challenges."+_challenge+".class_definition")
+    m = getattr(m, _challenge)
+    m = getattr(m, "class_definition")
+    m = getattr(m, _challenge)
+    config["CHALLENGES"][_challenge]["instance"] = m(barebone_config)
 
 app = Flask(__name__)
 socketio = SocketIO(app)
@@ -40,7 +55,7 @@ def handle_authenticate(args):
     API_KEY = args["API_KEY"]
     challenge_id = args["challenge_id"]
 
-    if challenge_id not in config.CHALLENGES.keys():
+    if challenge_id not in config["CHALLENGES"].keys():
         _message = {}
         _message["status"] = False
         _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
@@ -49,10 +64,19 @@ def handle_authenticate(args):
         return _message
     else:
         # TO-DO: Add actual authentication
+        def _authenticate(API_KEY):
+            #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
+            url = config["CROWDAI_BASE_URL"]+"/api/external_graders/"+API_KEY
+            headers = { 'Authorization': 'Token token=' + config["CROWDAI_GRADER_API_KEY"], "Content-Type": "application/vnd.api+json" }
+            return requests.get(url, headers=headers, verify=False)
+
+        authentication_response = _authenticate(API_KEY)
         _message = {}
-        _message["status"] = True
-        _message["message"] = ""
+        #TO-DO: Add explanation for the status code comparison
+        _message["status"] = authentication_response.status_code == 200
+        _message["message"] = json.loads(authentication_response.text)["message"]
         _message["session_token"] = str(uuid.uuid4())
+        #TO-DO: Setup internal session token
         return _message
 
 @socketio.on('close_session')
@@ -129,7 +153,7 @@ def execute_function(args):
 
     # TO-DO: Validate Session. Expire session after 48 hours
 
-    if challenge_id not in config.CHALLENGES.keys():
+    if challenge_id not in config["CHALLENGES"].keys():
         _message = {}
         _message["status"] = False
         _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
@@ -137,7 +161,7 @@ def execute_function(args):
 
         return _message
     else:
-        result = config.CHALLENGES[challenge_id]["instance"].execute_function(function_name, data, dry_run)
+        result = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, dry_run)
         #Enqueue Job
         #Listen on Output Channel
         #Relay messages to the client until job complete
@@ -154,7 +178,7 @@ def execute_function(args):
             else:
                 result["is_complete"] = False
                 result["progress"] = k*1.0/100
-                emit(response_channel, result)
+                # emit(response_channel, result)
                 #In case of error, "emit" result with status False,
                 # and return empty value to end this call
         return {}

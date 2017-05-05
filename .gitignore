@@ -99,3 +99,4 @@ ENV/
 # mkdocs documentation
 /site
 config.py
+config.json
