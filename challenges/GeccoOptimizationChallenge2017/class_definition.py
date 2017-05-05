@@ -11,7 +11,7 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
         self.challenge_id = "GeccoOptimizationChallenge2017"
         self.supported_functions = ["evaluate", "submit"]
 
-    def execute_function(self, function_name, data, dry_run=False):
+    def execute_function(self, function_name, data, extra_params, dry_run=False):
         """
         Request Params:
             session_token : String
@@ -20,6 +20,9 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
                 Unique identifier for the relevant function in the challenge
             data : JSON Object
                 JSON object which needs to be passed onto the said function
+            extra_params : Object
+                Extra Parameters that the said function might need to process
+                the data
             dry_run : Boolean
                 Boolean Variable which states if the operation is needed to be
                 actually executed, or randomly generated but semantically relevant
@@ -43,7 +46,7 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
         else:
             if function_name == "evaluate":
                 try:
-                    response = self._evaluate(data, dry_run)
+                    response = self._evaluate(data, extra_params, dry_run)
                     _message["response"] = response
                     _message["status"] = True
                     _message["message"] = ""
@@ -53,7 +56,7 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
                     _message["response"] = {}
                 return _message
             if function_name == "submit":
-                response = self._submit(data, dry_run)
+                response = self._submit(data, extra_params, dry_run)
                 if response["submission_id"] != None:
                     _message["response"] = response["submission_id"]
                     _message["status"] = True
@@ -65,7 +68,7 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
                 return _message
 
 
-    def _evaluate(self, data, dry_run=False):
+    def _evaluate(self, data, extra_params, dry_run=False):
         """
             Evaluates the
         """
@@ -76,21 +79,21 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
             #TO-DO: Replace with actual execution
             return [random.sample(range(30), 10) for x in range(10)]
 
-    def _submit(self, data, dry_run=False):
+    def _submit(self, data, extra_params, dry_run=False):
         """
             Evaluates a value and submits the score to CrowdAI
         """
 
         #TO-DO: Implement dry_run
-        def submit_results():
+        def submit_results(params):
             #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
             #TO-DO: Dont hardcode -_- !!
 
             url = self.config["CROWDAI_BASE_URL"]+"/api/external_graders/"
             headers = { 'Authorization': 'Token token=' + self.config["CROWDAI_GRADER_API_KEY"], "Content-Type": "application/vnd.api+json" }
             payload = {
-                "challenge_client_name" : "BBPTEST",
-                "api_key": "EXAMPLE_API_KEY",
+                "challenge_client_name" : self.challenge_id,
+                "api_key": params["api_key"],
                 "grading_status" : "graded",
                 "score": random.randint(0, 100)*1.0/100,
                 "score_secondary" : random.randint(0, 100)*1.0/100,
@@ -101,7 +104,7 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
             }
             return requests.post(url, params=payload, headers=headers, verify=False)
 
-        submit_response = submit_results()
+        submit_response = submit_results(extra_params)
         print submit_response
         print submit_response.text
         data = json.loads(submit_response.text)

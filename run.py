@@ -118,6 +118,8 @@ def execute_function(args):
                 about the final result and the progress in the meantime
             session_token : String
                 Unique identifier for a particular session
+            api_key : String
+                Participant's API Key
             challenge_id : String
                 Unique identifier for the challenge
             function_name : String
@@ -140,18 +142,23 @@ def execute_function(args):
     #TO-DO: Add a separate `type` param to communicate the "progress of execution"
 
     # Validate request params
-    validation = validate_request_params(args, ["response_channel", "session_token","challenge_id","function_name","data","dry_run"])
+    validation = validate_request_params(args, ["response_channel", "session_token", "api_key", "challenge_id","function_name","data","dry_run"])
     if not validation["result"]:
         return validation["message"]
 
     response_channel = args["response_channel"]
     session_token = args["session_token"]
+    api_key = args["api_key"]
     challenge_id = args["challenge_id"]
     function_name = args["function_name"]
     data = args["data"]
     dry_run = args["dry_run"]
 
     # TO-DO: Validate Session. Expire session after 48 hours
+    extra_params = {
+        "session_token" : session_token,
+        "api_key": api_key
+    }
 
     if challenge_id not in config["CHALLENGES"].keys():
         _message = {}
@@ -161,7 +168,7 @@ def execute_function(args):
 
         return _message
     else:
-        result = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, dry_run)
+        result = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, dry_run)
         #Enqueue Job
         #Listen on Output Channel
         #Relay messages to the client until job complete
