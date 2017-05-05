@@ -63,7 +63,6 @@ def handle_authenticate(args):
 
         return _message
     else:
-        # TO-DO: Add actual authentication
         def _authenticate(API_KEY):
             #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
             url = config["CROWDAI_BASE_URL"]+"/api/external_graders/"+API_KEY

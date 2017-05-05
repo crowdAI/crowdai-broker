@@ -85,26 +85,15 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
         """
 
         #TO-DO: Implement dry_run
-        def submit_results(params):
-            #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
-            #TO-DO: Dont hardcode -_- !!
 
-            url = self.config["CROWDAI_BASE_URL"]+"/api/external_graders/"
-            headers = { 'Authorization': 'Token token=' + self.config["CROWDAI_GRADER_API_KEY"], "Content-Type": "application/vnd.api+json" }
-            payload = {
-                "challenge_client_name" : self.challenge_id,
-                "api_key": params["api_key"],
-                "grading_status" : "graded",
-                "score": random.randint(0, 100)*1.0/100,
-                "score_secondary" : random.randint(0, 100)*1.0/100,
-                "comment" : "Ohhhh Yeahhhhh !!",
-                "media_large" : "http://cdn.zmescience.com/wp-content/uploads/2011/11/celegans-1.jpg",
-                "media_thumbnail" : "http://cdn.zmescience.com/wp-content/uploads/2011/11/celegans-1.jpg",
-                "media_content_type" : "image/jpeg"
-            }
-            return requests.post(url, params=payload, headers=headers, verify=False)
+        extra_params["score"] = random.randint(0, 100)*1.0/100,
+        extra_params["score_secondary"] = random.randint(0, 100)*1.0/100,
+        extra_params["comment"] = "Ohhhh Yeahhhhh"
+        extra_params["media_large"] = "http://cdn.zmescience.com/wp-content/uploads/2011/11/celegans-1.jpg"
+        extra_params["media_thumbnail"] = "http://cdn.zmescience.com/wp-content/uploads/2011/11/celegans-1.jpg"
+        extra_params["media_content_type"] = "image/jpeg"
 
-        submit_response = submit_results(extra_params)
+        submit_response = self.submit_results_to_crowdai(extra_params)
         print submit_response
         print submit_response.text
         data = json.loads(submit_response.text)
