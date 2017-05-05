@@ -169,7 +169,7 @@ def execute_function(args):
             if k==99:
                 result["is_complete"] = True
                 result["progress"] = 1
-                emit(response_channel, result)
+                emit(session_token+"::"+response_channel, result)
                 #In case of error, "emit" result with status False,
                 # and return empty value to end this call
             else:
