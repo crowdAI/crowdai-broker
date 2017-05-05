@@ -1,3 +1,4 @@
+import json
 
 def validate_request_params(args, expected_keys):
     # Validate request params
@@ -16,3 +17,17 @@ def validate_request_params(args, expected_keys):
         return {"result": False, "message":_message}
     else:
         return {"result": True}
+
+def config_loader():
+    #TO-DO: Implement a less hacky version of the config loader
+    config = json.loads(open("config.json").read())
+    barebone_config = config
+    #Instantiate Challenge objects
+    for _challenge in config["CHALLENGES"].keys():
+        m = __import__("challenges."+_challenge+".class_definition")
+        m = getattr(m, _challenge)
+        m = getattr(m, "class_definition")
+        m = getattr(m, _challenge)
+        config["CHALLENGES"][_challenge]["instance"] = m(barebone_config)
+
+    return config

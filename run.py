@@ -2,7 +2,7 @@ from flask import Flask
 from flask_socketio import SocketIO
 from flask_socketio import send, emit
 
-from utils import validate_request_params
+from utils import validate_request_params, config_loader
 
 import requests
 
@@ -14,16 +14,7 @@ import time
 """
 Load config
 """
-#TO-DO: Implement a less hacky version of the config loader
-config = json.loads(open("config.json").read())
-barebone_config = config
-#Instantiate Challenge objects
-for _challenge in config["CHALLENGES"].keys():
-    m = __import__("challenges."+_challenge+".class_definition")
-    m = getattr(m, _challenge)
-    m = getattr(m, "class_definition")
-    m = getattr(m, _challenge)
-    config["CHALLENGES"][_challenge]["instance"] = m(barebone_config)
+config = config_loader()
 
 app = Flask(__name__)
 socketio = SocketIO(app)
