@@ -56,6 +56,13 @@ def handle_authenticate(args):
 
         return _message
     else:
+        if config['DEBUG_MODE']:
+            _message = {}
+            _message["status"] = True
+            _message["message"] = "DEBUG_MODE: Ignoring authentication with the crowdAI Server"
+            _message["session_token"] = str(uuid.uuid4())
+            return _message
+
         def _authenticate(API_KEY):
             #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
             url = config["CROWDAI_BASE_URL"]+"/api/external_graders/"+API_KEY
