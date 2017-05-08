@@ -4,6 +4,8 @@ import requests
 import json
 import uuid
 
+from flask_socketio import send, emit
+
 
 class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
     def __init__(self, config):
@@ -83,7 +85,15 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
         """
             Evaluates a value and submits the score to CrowdAI
         """
-
+        for k in range(10):
+            _message = {}
+            _message["response"] = [1,2,3,4,5,6,7,8,9]
+            _message["status"] = True
+            _message["message"] = "On the Grader...."
+            _message["is_complete"] = False
+            _message["progress"] = k*1.0/100
+            # emit(extra_params['response_channel'], _message)
+        # emit(self.session_token+"::"+self.response_channel, result)
         #TO-DO: Implement dry_run
 
         extra_params["score"] = random.randint(0, 100)*1.0/100,
@@ -94,8 +104,6 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
         extra_params["media_content_type"] = "image/jpeg"
 
         submit_response = self.submit_results_to_crowdai(extra_params)
-        print submit_response
-        print submit_response.text
         data = json.loads(submit_response.text)
         if submit_response.status_code == 202:
             pass

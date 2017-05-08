@@ -11,6 +11,8 @@ import json
 
 import time
 
+from job_states import JobStates
+
 """
 Load config
 """
@@ -158,6 +160,7 @@ def execute_function(args):
 
         return _message
     else:
+        extra_params["response_channel"] = session_token+"::"+response_channel
         result = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, dry_run)
         #Enqueue Job
         #Listen on Output Channel
@@ -175,7 +178,7 @@ def execute_function(args):
             else:
                 result["is_complete"] = False
                 result["progress"] = k*1.0/100
-                # emit(response_channel, result)
+                emit(session_token+"::"+response_channel, result)
                 #In case of error, "emit" result with status False,
                 # and return empty value to end this call
         return {}
@@ -183,4 +186,4 @@ def execute_function(args):
 
 
 if __name__ == '__main__':
-    socketio.run(app)
+    socketio.run(app, host='0.0.0.0', port=5000)
