@@ -145,7 +145,7 @@ def execute_function(args):
     if not validation["result"]:
         return validation["message"]
 
-    response_channel = args["response_channel"]
+    client_response_channel = args["response_channel"]
     session_token = args["session_token"]
     api_key = args["api_key"]
     challenge_id = args["challenge_id"]
@@ -167,10 +167,8 @@ def execute_function(args):
 
         return _message
     else:
-        extra_params["response_channel"] = session_token+"::"+response_channel
+        extra_params["client_response_channel"] = session_token+"::"+client_response_channel
         config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, dry_run)
-
-
 
 
         #Enqueue Job

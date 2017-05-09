@@ -1,5 +1,5 @@
 import json
-
+import redis
 def validate_request_params(args, expected_keys):
     # Validate request params
     missing_keys = []
@@ -28,6 +28,10 @@ def config_loader():
         m = getattr(m, _challenge)
         m = getattr(m, "class_definition")
         m = getattr(m, _challenge)
-        config["CHALLENGES"][_challenge]["instance"] = m(barebone_config)
+        REDIS_POOL = redis.ConnectionPool(host=config["CHALLENGES"][_challenge]["redis-host"], port=config["CHALLENGES"][_challenge]["redis-port"], db=0)
+        config["CHALLENGES"][_challenge]["instance"] = m(barebone_config, REDIS_POOL)
+        # Instantiate Challenge specific redis-pool
+
+
 
     return config

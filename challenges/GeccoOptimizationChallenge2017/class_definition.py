@@ -8,8 +8,8 @@ from flask_socketio import send, emit
 
 
 class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
-    def __init__(self, config):
-        CrowdAIBaseChallenge.__init__(self, config)
+    def __init__(self, config, REDIS_POOL):
+        CrowdAIBaseChallenge.__init__(self, config, REDIS_POOL)
         self.challenge_id = "GeccoOptimizationChallenge2017"
         self.supported_functions = ["evaluate", "submit"]
 
@@ -25,6 +25,9 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
             extra_params : Object
                 Extra Parameters that the said function might need to process
                 the data
+                * client_response_channel : String
+                    socket.io response channel where the client
+                    can be relayed the messages from the JobFactory
             dry_run : Boolean
                 Boolean Variable which states if the operation is needed to be
                 actually executed, or randomly generated but semantically relevant
@@ -47,16 +50,17 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
             return _message
         else:
             if function_name == "evaluate":
-                try:
-                    response = self._evaluate(data, extra_params, dry_run)
-                    _message["response"] = response
-                    _message["status"] = True
-                    _message["message"] = ""
-                except e:
-                    _message["status"] = False
-                    _message["message"] = str(e)
-                    _message["response"] = {}
-                return _message
+
+                # try:
+                #     response = self._evaluate(data, extra_params, dry_run)
+                #     _message["response"] = response
+                #     _message["status"] = True
+                #     _message["message"] = ""
+                # except e:
+                #     _message["status"] = False
+                #     _message["message"] = str(e)
+                #     _message["response"] = {}
+                # return _message
             # if function_name == "submit":
             #     response = self._submit(data, extra_params, dry_run)
             #     if response["submission_id"] != None:

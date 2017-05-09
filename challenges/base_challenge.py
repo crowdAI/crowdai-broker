@@ -1,7 +1,8 @@
 import requests
 class CrowdAIBaseChallenge:
-    def __init__(self, config):
+    def __init__(self, config, REDIS_POOL):
         self.config = config
+        self.redis_pool = REDIS_POOL
 
     def submit_results_to_crowdai(self, params):
         #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
