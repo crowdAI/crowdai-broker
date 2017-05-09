@@ -79,45 +79,8 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
                 # More details : https://github.com/miguelgrinberg/Flask-SocketIO/issues/318
                 # If there are performance issues, this can be removed.
                 time.sleep(0)
-
-                print job_response_blob
-                print extra_params['client_response_channel'], job_response_blob
                 if job_response_blob['job_state'] == JobStates.COMPLETE:
-                    print "Job Complete !! Yaayyy"
-                    break
+                    return {}
                 if job_response_blob['job_state'] == JobStates.ERROR:
-                    print "Error :("
-                    break
+                    return {}
             return {}
-
-
-    def _submit(self, data, extra_params, dry_run=False):
-        """
-            Evaluates a value and submits the score to CrowdAI
-        """
-        for k in range(10):
-            _message = {}
-            _message["response"] = [1,2,3,4,5,6,7,8,9]
-            _message["status"] = True
-            _message["message"] = "On the Grader...."
-            _message["is_complete"] = False
-            _message["progress"] = k*1.0/100
-            socketio.emit(extra_params['response_channel'], _message)
-
-        # emit(self.session_token+"::"+self.response_channel, result)
-        #TO-DO: Implement dry_run
-
-        extra_params["score"] = random.randint(0, 100)*1.0/100,
-        extra_params["score_secondary"] = random.randint(0, 100)*1.0/100,
-        extra_params["comment"] = "Ohhhh Yeahhhhh"
-        extra_params["media_large"] = "http://cdn.zmescience.com/wp-content/uploads/2011/11/celegans-1.jpg"
-        extra_params["media_thumbnail"] = "http://cdn.zmescience.com/wp-content/uploads/2011/11/celegans-1.jpg"
-        extra_params["media_content_type"] = "image/jpeg"
-
-        submit_response = self.submit_results_to_crowdai(extra_params)
-        data = json.loads(submit_response.text)
-        if submit_response.status_code == 202:
-            pass
-        else:
-            data["submission_id"] = None
-        return data

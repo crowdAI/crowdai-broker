@@ -178,27 +178,7 @@ def execute_function(args):
     else:
         # The actual response channel is prepended with the session_token to discourage session hijacking attempts
         extra_params["client_response_channel"] = session_token+"::"+client_response_channel
-        print client_response_channel
-
         config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
-
-        #Enqueue Job
-        #Listen on Output Channel
-        #Relay messages to the client until job complete
-        #Stop listening on Output Channel in case of job complete or error
-        # result = {}
-        # result["is_complete"] = False
-        # result["progress"] = 0
-        # for k in range(100):
-        #     if k==99:
-        #         result["is_complete"] = True
-        #         result["progress"] = 1
-        #         emit(extra_params["client_response_channel"], result)
-        #     else:
-        #         result["is_complete"] = False
-        #         result["progress"] = k*1.0/100
-        #         emit(extra_params["client_response_channel"], result)
-        #     print client_response_channel, result
         return {}
         # return _message
 
