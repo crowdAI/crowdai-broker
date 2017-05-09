@@ -24,13 +24,15 @@ def config_loader():
     barebone_config = config
     #Instantiate Challenge objects
     for _challenge in config["CHALLENGES"].keys():
+        # Create the challenge object from the challenge string
         m = __import__("challenges."+_challenge+".class_definition")
         m = getattr(m, _challenge)
         m = getattr(m, "class_definition")
         m = getattr(m, _challenge)
+
+        # Instantiate Challenge specific redis-pool
         REDIS_POOL = redis.ConnectionPool(host=config["CHALLENGES"][_challenge]["redis-host"], port=config["CHALLENGES"][_challenge]["redis-port"], db=0)
         config["CHALLENGES"][_challenge]["instance"] = m(barebone_config, REDIS_POOL)
-        # Instantiate Challenge specific redis-pool
 
 
 
