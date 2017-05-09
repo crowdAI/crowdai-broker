@@ -3,6 +3,7 @@ import random
 import requests
 import json
 import uuid
+import redis
 
 from flask_socketio import send, emit
 
@@ -49,29 +50,30 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
             _message["response"] = {}
             return _message
         else:
-            if function_name == "evaluate":
+            redis_conn = redis.Redis(connection_pool = self.redis_pool)
+            respond_to_me_at = self.challenge_id+'::enqueue_job_response::'+ str(uuid.uuid4())
+            _payload = {
+                "respond_to_me_at": respond_to_me_at,
+                "function_name": "evaluate", #or can also provide "submit"
+                "data" : data
+            }
+            redis_conn.publish(self.challenge_id+'::enqueue_job', json.dumps(_payload))
+            # Refer to the comments in JobFactory (run.py) to understand why we have so many response channels
+            # when interacting with the jobfactory
+            job_response_channel_name = redis_conn.blpop(respond_to_me_at)
 
-                # try:
-                #     response = self._evaluate(data, extra_params, dry_run)
-                #     _message["response"] = response
-                #     _message["status"] = True
-                #     _message["message"] = ""
-                # except e:
-                #     _message["status"] = False
-                #     _message["message"] = str(e)
-                #     _message["response"] = {}
-                # return _message
-            # if function_name == "submit":
-            #     response = self._submit(data, extra_params, dry_run)
-            #     if response["submission_id"] != None:
-            #         _message["response"] = response["submission_id"]
-            #         _message["status"] = True
-            #         _message["message"] = response["message"]
-            #     else:
-            #         _message["status"] = False
-            #         _message["message"] = response["message"]
-            #         _message["response"] = {}
-            #     return _message
+            # Now keep blpop-ing on the job_response_channel_name
+            # until either the Job is complete or there is an error
+            while True:
+                job_response = redis_conn.blpop(job_response_channel_name)
+                # The actual response looks like :
+                # ('GeccoOptimizationChallenge2017::job_response::d57daf8d-9d96-42ae-ba61-d698f665a753', "{'job_state': 'crowdai.job_state.COMPLETE', 'data': {'score': 45}, 'message': ''}")
+                # So we simply ignore the first parameter (the name of job_response_channel_name),
+                # and focus on the actual response object
+                job_response_blob = json.loads(job_response[1])
+                print job_response_blob
+                print "On the broker......", job_response_blob
+                
 
 
     def _evaluate(self, data, extra_params, dry_run=False):
