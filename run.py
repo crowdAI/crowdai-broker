@@ -168,26 +168,30 @@ def execute_function(args):
         return _message
     else:
         extra_params["response_channel"] = session_token+"::"+response_channel
-        result = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, dry_run)
+        config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, dry_run)
+
+
+
+
         #Enqueue Job
         #Listen on Output Channel
         #Relay messages to the client until job complete
         #Stop listening on Output Channel in case of job complete or error
-        result["is_complete"] = False
-        result["progress"] = 0
-        for k in range(100):
-            if k==99:
-                result["is_complete"] = True
-                result["progress"] = 1
-                emit(session_token+"::"+response_channel, result)
-                #In case of error, "emit" result with status False,
-                # and return empty value to end this call
-            else:
-                result["is_complete"] = False
-                result["progress"] = k*1.0/100
-                emit(session_token+"::"+response_channel, result)
-                #In case of error, "emit" result with status False,
-                # and return empty value to end this call
+        # result["is_complete"] = False
+        # result["progress"] = 0
+        # for k in range(100):
+        #     if k==99:
+        #         result["is_complete"] = True
+        #         result["progress"] = 1
+        #         # emit(session_token+"::"+response_channel, result)
+        #         #In case of error, "emit" result with status False,
+        #         # and return empty value to end this call
+        #     else:
+        #         result["is_complete"] = False
+        #         result["progress"] = k*1.0/100
+        #         # emit(session_token+"::"+response_channel, result)
+        #         #In case of error, "emit" result with status False,
+        #         # and return empty value to end this call
         return {}
         # return _message
 

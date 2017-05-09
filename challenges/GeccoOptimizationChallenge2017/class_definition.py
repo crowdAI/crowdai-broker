@@ -57,17 +57,17 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
                     _message["message"] = str(e)
                     _message["response"] = {}
                 return _message
-            if function_name == "submit":
-                response = self._submit(data, extra_params, dry_run)
-                if response["submission_id"] != None:
-                    _message["response"] = response["submission_id"]
-                    _message["status"] = True
-                    _message["message"] = response["message"]
-                else:
-                    _message["status"] = False
-                    _message["message"] = response["message"]
-                    _message["response"] = {}
-                return _message
+            # if function_name == "submit":
+            #     response = self._submit(data, extra_params, dry_run)
+            #     if response["submission_id"] != None:
+            #         _message["response"] = response["submission_id"]
+            #         _message["status"] = True
+            #         _message["message"] = response["message"]
+            #     else:
+            #         _message["status"] = False
+            #         _message["message"] = response["message"]
+            #         _message["response"] = {}
+            #     return _message
 
 
     def _evaluate(self, data, extra_params, dry_run=False):
@@ -92,7 +92,7 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
             _message["message"] = "On the Grader...."
             _message["is_complete"] = False
             _message["progress"] = k*1.0/100
-            # emit(extra_params['response_channel'], _message)
+            emit(extra_params['response_channel'], _message)
         # emit(self.session_token+"::"+self.response_channel, result)
         #TO-DO: Implement dry_run
 
