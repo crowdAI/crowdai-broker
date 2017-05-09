@@ -1,12 +1,11 @@
 from ..base_challenge import CrowdAIBaseChallenge
+from ..job_states import JobStates
 import random
 import requests
 import json
 import uuid
 import redis
-
-from flask_socketio import send, emit
-
+import time
 
 class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
     def __init__(self, config, REDIS_POOL):
@@ -14,7 +13,7 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
         self.challenge_id = "GeccoOptimizationChallenge2017"
         self.supported_functions = ["evaluate", "submit"]
 
-    def execute_function(self, function_name, data, extra_params, dry_run=False):
+    def execute_function(self, function_name, data, extra_params, socketio, dry_run=False):
         """
         Request Params:
             session_token : String
@@ -29,6 +28,8 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
                 * client_response_channel : String
                     socket.io response channel where the client
                     can be relayed the messages from the JobFactory
+            socketio : SocketIO Object
+                Holds the current session contexxt
             dry_run : Boolean
                 Boolean Variable which states if the operation is needed to be
                 actually executed, or randomly generated but semantically relevant
@@ -71,21 +72,24 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
                 # So we simply ignore the first parameter (the name of job_response_channel_name),
                 # and focus on the actual response object
                 job_response_blob = json.loads(job_response[1])
+
+                # Relay the response to the client
+                socketio.emit(extra_params['client_response_channel'], job_response)
+                # Note: time.sleep ensures that the emit message is transferred instantaneously
+                # More details : https://github.com/miguelgrinberg/Flask-SocketIO/issues/318
+                # If there are performance issues, this can be removed.
+                time.sleep(0)
+
                 print job_response_blob
-                print "On the broker......", job_response_blob
-                
+                print extra_params['client_response_channel'], job_response_blob
+                if job_response_blob['job_state'] == JobStates.COMPLETE:
+                    print "Job Complete !! Yaayyy"
+                    break
+                if job_response_blob['job_state'] == JobStates.ERROR:
+                    print "Error :("
+                    break
+            return {}
 
-
-    def _evaluate(self, data, extra_params, dry_run=False):
-        """
-            Evaluates the
-        """
-        if dry_run == True:
-            # TO-DO: Replace with a valid random sampling
-            return [random.sample(range(30), 10) for x in range(10)]
-        else:
-            #TO-DO: Replace with actual execution
-            return [random.sample(range(30), 10) for x in range(10)]
 
     def _submit(self, data, extra_params, dry_run=False):
         """
@@ -98,7 +102,8 @@ class GeccoOptimizationChallenge2017(CrowdAIBaseChallenge):
             _message["message"] = "On the Grader...."
             _message["is_complete"] = False
             _message["progress"] = k*1.0/100
-            emit(extra_params['response_channel'], _message)
+            socketio.emit(extra_params['response_channel'], _message)
+
         # emit(self.session_token+"::"+self.response_channel, result)
         #TO-DO: Implement dry_run
 

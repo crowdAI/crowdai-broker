@@ -1,8 +1,10 @@
 from flask import Flask
 from flask_socketio import SocketIO
+from flask import copy_current_request_context
 from flask_socketio import send, emit
 
-from utils import validate_request_params, config_loader
+from utils import config_loader, validate_request_params
+from challenges.job_states import JobStates
 
 import requests
 
@@ -11,7 +13,12 @@ import json
 
 import time
 
-from job_states import JobStates
+"""
+Note: Adding eventlet and monkey_patching it to ensure that emit messages are not
+    accumulated and sent out in bursts
+"""
+import eventlet
+eventlet.monkey_patch()
 
 """
 Load config
@@ -131,12 +138,14 @@ def execute_function(args):
                 response is supposed to be returned.
 
         Response Params:
-            status : Boolean
-                Holds True if the operation is successfully executed
+            job_state : String
+                Holds the type of the job event as described in the JobStates Class
             message : String
-                Holds an optional error message in case of failure of execution
-            response: JSON Object
+                Optional Message
+            data : JSON Object
                 JSON object which holds the response of the function
+                Look up the function definitions for more information on the structure
+                of the data
     """
     #TO-DO: Add a separate `type` param to communicate the "progress of execution"
 
@@ -161,35 +170,35 @@ def execute_function(args):
 
     if challenge_id not in config["CHALLENGES"].keys():
         _message = {}
-        _message["status"] = False
+        _message["job_state"] = JobStates.ERROR
         _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
-        _message["response"] = {}
+        _message["data"] = {}
 
         return _message
     else:
+        # The actual response channel is prepended with the session_token to discourage session hijacking attempts
         extra_params["client_response_channel"] = session_token+"::"+client_response_channel
-        config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, dry_run)
+        print client_response_channel
 
+        config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
 
         #Enqueue Job
         #Listen on Output Channel
         #Relay messages to the client until job complete
         #Stop listening on Output Channel in case of job complete or error
+        # result = {}
         # result["is_complete"] = False
         # result["progress"] = 0
         # for k in range(100):
         #     if k==99:
         #         result["is_complete"] = True
         #         result["progress"] = 1
-        #         # emit(session_token+"::"+response_channel, result)
-        #         #In case of error, "emit" result with status False,
-        #         # and return empty value to end this call
+        #         emit(extra_params["client_response_channel"], result)
         #     else:
         #         result["is_complete"] = False
         #         result["progress"] = k*1.0/100
-        #         # emit(session_token+"::"+response_channel, result)
-        #         #In case of error, "emit" result with status False,
-        #         # and return empty value to end this call
+        #         emit(extra_params["client_response_channel"], result)
+        #     print client_response_channel, result
         return {}
         # return _message
 
