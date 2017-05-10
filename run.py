@@ -3,7 +3,7 @@ from flask_socketio import SocketIO
 from flask import copy_current_request_context
 from flask_socketio import send, emit
 
-from utils import config_loader, validate_request_params
+from utils import config_loader, validate_request_params, validate_parallel_request_params
 from challenges.job_states import JobStates
 
 import requests
@@ -39,6 +39,8 @@ def handle_authenticate(args):
                 Holds the API Key of the participant
             challenge_id : String
                 Holds the unique identifier for the challenge
+            client_version : String
+                Holds the version number of the crowdai client
 
         Response Params:
             status : Boolean
@@ -48,19 +50,18 @@ def handle_authenticate(args):
             session_token : String
                 Holds a unique identifier for a particular session
     """
-    validation = validate_request_params(args, ["API_KEY", "challenge_id"])
+    validation = validate_request_params(args, ["API_KEY", "challenge_id", "client_version"])
     if not validation["result"]:
         return validation["message"]
-
     API_KEY = args["API_KEY"]
     challenge_id = args["challenge_id"]
+    client_version = args["client_version"]
 
     if challenge_id not in config["CHALLENGES"].keys():
         _message = {}
         _message["status"] = False
         _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
         _message["response"] = {}
-
         return _message
     else:
         if config['DEBUG_MODE']:
@@ -68,6 +69,12 @@ def handle_authenticate(args):
             _message["status"] = True
             _message["message"] = "DEBUG_MODE: Ignoring authentication with the crowdAI Server"
             _message["session_token"] = str(uuid.uuid4())
+            # print args["client_version"]
+            # return {
+            #         "status": False,
+            #         "message": "Not cool :("
+            #         }
+
             return _message
 
         def _authenticate(API_KEY):
@@ -136,6 +143,9 @@ def execute_function(args):
                 Boolean Variable which states if the operation is needed to be
                 actually executed, or randomly generated but semantically relevant
                 response is supposed to be returned.
+            parallel : Boolean
+                Boolean Variable which states if multiple jobs are to be parallely
+                executed
 
         Response Params:
             job_state : String
@@ -147,41 +157,59 @@ def execute_function(args):
                 Look up the function definitions for more information on the structure
                 of the data
     """
-    #TO-DO: Add a separate `type` param to communicate the "progress of execution"
+    try:
+        # Validate request params
+        validation = validate_request_params(args, ["response_channel", "session_token", "api_key", "challenge_id","function_name","data","dry_run", "parallel"])
+        if not validation["result"]:
+            return validation["message"]
 
-    # Validate request params
-    validation = validate_request_params(args, ["response_channel", "session_token", "api_key", "challenge_id","function_name","data","dry_run"])
-    if not validation["result"]:
-        return validation["message"]
+        client_response_channel = args["response_channel"]
+        session_token = args["session_token"]
+        api_key = args["api_key"]
+        challenge_id = args["challenge_id"]
+        function_name = args["function_name"]
+        data = args["data"]
+        dry_run = args["dry_run"]
+        parallel = args["parallel"]
 
-    client_response_channel = args["response_channel"]
-    session_token = args["session_token"]
-    api_key = args["api_key"]
-    challenge_id = args["challenge_id"]
-    function_name = args["function_name"]
-    data = args["data"]
-    dry_run = args["dry_run"]
+        if parallel == True:
+            #Validate again if its a parallel job processing request
+            validation = validate_parallel_request_params(challenge_id, args, ["response_channel", "session_token", "api_key", "challenge_id","function_name","data","dry_run", "parallel"])
+            if not validation["result"]:
+                return validation["message"]
 
-    # TO-DO: Validate Session. Expire session after 48 hours
-    extra_params = {
-        "session_token" : session_token,
-        "api_key": api_key
-    }
 
-    if challenge_id not in config["CHALLENGES"].keys():
-        _message = {}
-        _message["job_state"] = JobStates.ERROR
-        _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
-        _message["data"] = {}
+        # TO-DO: Validate Session. Expire session after 48 hours
+        extra_params = {
+            "session_token" : session_token,
+            "api_key": api_key
+        }
 
-        return _message
-    else:
-        # The actual response channel is prepended with the session_token to discourage session hijacking attempts
-        extra_params["client_response_channel"] = session_token+"::"+client_response_channel
-        config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
-        return {}
-        # return _message
+        if challenge_id not in config["CHALLENGES"].keys():
+            _message = {}
+            _message["job_state"] = JobStates.ERROR
+            _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
+            _message["data"] = {}
 
+            return _message
+        else:
+            # The actual response channel is prepended with the session_token to discourage session hijacking attempts
+            extra_params["client_response_channel"] = session_token+"::"+client_response_channel
+            if parallel == False:
+                config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
+            else:
+                config["CHALLENGES"][challenge_id]["instance"].parallel_execute_function(function_name, data, extra_params, socketio, dry_run)
+            _result = {}
+            _result["job_state"] = JobStates.COMPLETE
+            _result["data"] = {}
+            _result["message"] = ""
+            return _result
+    except Exception as e:
+            _message = {}
+            _message["job_state"] = JobStates.ERROR
+            _message["message"] = str(e)
+            _message["data"] = {}
+            return _message
 
 if __name__ == '__main__':
     socketio.run(app, host=config['SOCKETIO-HOST'], port=config['SOCKETIO-PORT'])
