@@ -14,7 +14,6 @@ class CrowdAIBaseChallenge:
     def submit_results_to_crowdai(self, params):
         #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
         #TO-DO: Dont hardcode -_- !!
-
         url = self.config["CROWDAI_BASE_URL"]+"/api/external_graders/"
         headers = { 'Authorization': 'Token token=' + self.config["CROWDAI_GRADER_API_KEY"], "Content-Type": "application/vnd.api+json" }
         payload = {
@@ -28,7 +27,9 @@ class CrowdAIBaseChallenge:
             "media_thumbnail" : params["media_thumbnail"],
             "media_content_type" : params["media_content_type"]
         }
-        return requests.post(url, params=payload, headers=headers, verify=False)
+        response = requests.post(url, params=payload, headers=headers, verify=False)
+        print response.text
+        return response
 
     def parallel_execute_function(self, function_name, data, extra_params, socketio, dry_run=False):
         """
@@ -62,10 +63,10 @@ class CrowdAIBaseChallenge:
         """
         _message = {}
         if function_name not in self.supported_functions:
-            _message["status"] = False
+            _message["job_state"] = JobStates.ERROR
             # To-DO: Add localization to string messages
             _message["message"] = "Function `%s`  unrecognized in context of the %s challenge" % (function_name, challenge_id)
-            _message["response"] = {}
+            _message["data"] = {}
             return _message
         else:
             redis_conn = redis.Redis(connection_pool = self.redis_pool)

@@ -51,41 +51,52 @@ def handle_authenticate(args):
             session_token : String
                 Holds a unique identifier for a particular session
     """
-    validation = validate_request_params(args, ["API_KEY", "challenge_id", "client_version"])
-    if not validation["result"]:
-        return validation["message"]
-    API_KEY = args["API_KEY"]
-    challenge_id = args["challenge_id"]
-    client_version = args["client_version"]
+    try:
+        validation = validate_request_params(args, ["API_KEY", "challenge_id", "client_version"])
+        if not validation["result"]:
+            return validation["message"]
+        API_KEY = args["API_KEY"]
+        challenge_id = args["challenge_id"]
+        client_version = args["client_version"]
 
-    if challenge_id not in config["CHALLENGES"].keys():
-        _message = {}
-        _message["status"] = False
-        _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
-        _message["response"] = {}
-        return _message
-    else:
-        if config['DEBUG_MODE']:
+        if challenge_id not in config["CHALLENGES"].keys():
             _message = {}
-            _message["status"] = True
-            _message["message"] = "DEBUG_MODE: Ignoring authentication with the crowdAI Server"
+            _message["job_state"] = JobStates.ERROR
+            _message["message"] = "Unrecognized Challenge : %s. \n Please check the `challenge_id` again and/or update your client." % challenge_id
+            _message["response"] = {}
+            return _message
+        else:
+            if config['DEBUG_MODE']:
+                _message = {}
+                _message["job_state"] = JobStates.ERROR
+                _message["message"] = "DEBUG_MODE: Ignoring authentication with the crowdAI Server"
+                _message["session_token"] = str(uuid.uuid4())
+                return _message
+
+            def _authenticate(API_KEY):
+                #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
+                url = config["CROWDAI_BASE_URL"]+"/api/external_graders/"+API_KEY
+                headers = { 'Authorization': 'Token token=' + config["CROWDAI_GRADER_API_KEY"], "Content-Type": "application/vnd.api+json" }
+                return requests.get(url, headers=headers, verify=False)
+
+            authentication_response = _authenticate(API_KEY)
+            _message = {}
+            #TO-DO: Add explanation for the status code comparison
+            _message["job_state"] = JobStates.COMPLETE if (authentication_response.status_code == 200) else JobStates.ERROR
+            _message["message"] = json.loads(authentication_response.text)["message"]
             _message["session_token"] = str(uuid.uuid4())
+            #TO-DO: Setup internal session token
+            return _message
+    except Exception as e:
+            _message = {}
+            _message["job_state"] = JobStates.ERROR
+            _message["message"] = str(e)
+            if config["DEBUG_MODE"]:
+                traceback.print_exc()
+            traceback.print_exc()
+            _message["data"] = {}
             return _message
 
-        def _authenticate(API_KEY):
-            #TO-DO: Refactor CrowdAI RailsAPI calls into a separate class
-            url = config["CROWDAI_BASE_URL"]+"/api/external_graders/"+API_KEY
-            headers = { 'Authorization': 'Token token=' + config["CROWDAI_GRADER_API_KEY"], "Content-Type": "application/vnd.api+json" }
-            return requests.get(url, headers=headers, verify=False)
-
-        authentication_response = _authenticate(API_KEY)
-        _message = {}
-        #TO-DO: Add explanation for the status code comparison
-        _message["status"] = authentication_response.status_code == 200
-        _message["message"] = json.loads(authentication_response.text)["message"]
-        _message["session_token"] = str(uuid.uuid4())
-        #TO-DO: Setup internal session token
-        return _message
 
 @socketio.on('close_session')
 def close_session(args):
@@ -191,10 +202,15 @@ def execute_function(args):
             # The actual response channel is prepended with the session_token to discourage session hijacking attempts
             extra_params["client_response_channel"] = session_token+"::"+client_response_channel
 
-            if parallel == False:
-                aggregated_response = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
+            # Handle special case of `submit` function
+            # TODO : Refactor this bit of code
+            if function_name=="submit":
+                aggregated_response = config["CHALLENGES"][challenge_id]["instance"].execute_submit(data, extra_params, socketio)
             else:
-                aggregated_response = config["CHALLENGES"][challenge_id]["instance"].parallel_execute_function(function_name, data, extra_params, socketio, dry_run)
+                if parallel == False:
+                    aggregated_response = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
+                else:
+                    aggregated_response = config["CHALLENGES"][challenge_id]["instance"].parallel_execute_function(function_name, data, extra_params, socketio, dry_run)
             _result = {}
             _result["job_state"] = JobStates.COMPLETE
             _result["data"] = aggregated_response
@@ -206,6 +222,7 @@ def execute_function(args):
             _message["message"] = str(e)
             if config["DEBUG_MODE"]:
                 traceback.print_exc()
+            traceback.print_exc()
             _message["data"] = {}
             return _message
 
