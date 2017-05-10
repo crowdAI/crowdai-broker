@@ -70,7 +70,6 @@ class CrowdAIBaseChallenge:
         else:
             redis_conn = redis.Redis(connection_pool = self.redis_pool)
             respond_to_me_at = self.challenge_id+'::enqueue_job_response::'+ str(uuid.uuid4())
-            print "RESPOND_TO_ME_AT :::: ", respond_to_me_at
             # The idea of parallel execution is simple. We just enqueue multiple jobs,
             # And ask to receieve all their responses on the same channel.
             # Then we keep rerouting the responses received to the same client_response_channel
@@ -92,7 +91,11 @@ class CrowdAIBaseChallenge:
 
             # Now keep blpop-ing on the job_response_channel_name
             # until either the Job is complete or there is an error
-            total_job_processed = 0
+            total_jobs_processed = 0
+            job_responses = []
+            for k in range(len(data)):
+                job_responses.append(False)
+
             while True:
                 job_response = redis_conn.blpop(job_response_channel_name)
                 # The actual response looks like :
@@ -102,24 +105,24 @@ class CrowdAIBaseChallenge:
                 job_response_blob = json.loads(job_response[1])
 
                 # Relay the response to the client
-                print "Job Response : ", job_response_blob
-                print "Responding job_response_blob at", extra_params['client_response_channel']
                 socketio.emit(extra_params['client_response_channel'], job_response)
                 # Note: time.sleep ensures that the emit message is transferred instantaneously
                 # More details : https://github.com/miguelgrinberg/Flask-SocketIO/issues/318
                 # If there are performance issues, this can be removed.
                 time.sleep(0)
                 if job_response_blob['job_state'] == JobStates.COMPLETE:
-                    total_job_processed += 1
+                    total_jobs_processed += 1
+                    job_responses[job_response_blob['data_sequence_no']] = job_response_blob['data']
                 if job_response_blob['job_state'] == JobStates.ERROR:
-                    total_job_processed += 1
+                    total_jobs_processed += 1
+                    job_responses[job_response_blob['data_sequence_no']] = job_response_blob['data']
 
                 # The end of a parallel-funciton-execution is now determined by keeping a count
                 # of the combined sum of job completions and job-errors.
                 # We respond back when all the jobs have terminated (either successfully or unsuccessfully)
-                if total_job_processed == len(data):
-                    return {}
-            return {}
+                if total_jobs_processed == len(data):
+                    return job_responses
+            return job_responses
 
     def execute_function(self, function_name, data, extra_params, socketio, dry_run=False):
-        return self.parallel_execute_function(function_name, [data], extra_params, socketio, dry_run=False)
+        return self.parallel_execute_function(function_name, [data], extra_params, socketio, dry_run=False)[0]

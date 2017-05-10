@@ -12,6 +12,7 @@ import uuid
 import json
 
 import time
+import traceback
 
 """
 Note: Adding eventlet and monkey_patching it to ensure that emit messages are not
@@ -69,12 +70,6 @@ def handle_authenticate(args):
             _message["status"] = True
             _message["message"] = "DEBUG_MODE: Ignoring authentication with the crowdAI Server"
             _message["session_token"] = str(uuid.uuid4())
-            # print args["client_version"]
-            # return {
-            #         "status": False,
-            #         "message": "Not cool :("
-            #         }
-
             return _message
 
         def _authenticate(API_KEY):
@@ -195,19 +190,22 @@ def execute_function(args):
         else:
             # The actual response channel is prepended with the session_token to discourage session hijacking attempts
             extra_params["client_response_channel"] = session_token+"::"+client_response_channel
+
             if parallel == False:
-                config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
+                aggregated_response = config["CHALLENGES"][challenge_id]["instance"].execute_function(function_name, data, extra_params, socketio, dry_run)
             else:
-                config["CHALLENGES"][challenge_id]["instance"].parallel_execute_function(function_name, data, extra_params, socketio, dry_run)
+                aggregated_response = config["CHALLENGES"][challenge_id]["instance"].parallel_execute_function(function_name, data, extra_params, socketio, dry_run)
             _result = {}
             _result["job_state"] = JobStates.COMPLETE
-            _result["data"] = {}
+            _result["data"] = aggregated_response
             _result["message"] = ""
             return _result
     except Exception as e:
             _message = {}
             _message["job_state"] = JobStates.ERROR
             _message["message"] = str(e)
+            if config["DEBUG_MODE"]:
+                traceback.print_exc()
             _message["data"] = {}
             return _message
 
